@@ -55,13 +55,13 @@ html,body{margin:0}
   <div class="group"><label id="l-col">Colour</label><div class="seg" role="group" aria-labelledby="l-col" id="g-col">
     <button id="c-white" data-v="white" aria-pressed="true"><span class="swatch" style="background:#f2f2f0"></span>White</button><button id="c-black" data-v="black" aria-pressed="false"><span class="swatch" style="background:#111"></span>Black</button></div></div>
   <div class="group"><label id="l-view">View</label><div class="seg" role="group" aria-labelledby="l-view" id="g-view">
-    <button id="v-front" data-v="front" aria-pressed="false">Front</button><button id="v-back" data-v="back" aria-pressed="false">Back</button><button id="v-left" data-v="left" aria-pressed="false">Left arm</button><button id="v-right" data-v="right" aria-pressed="false">Right arm</button><button id="v-spin" data-v="spin" aria-pressed="true">Spin</button></div></div>
+    <button id="v-front" data-v="front" aria-pressed="false">Front</button><button id="v-back" data-v="back" aria-pressed="false">Back</button><button id="v-left" data-v="left" aria-pressed="false">Left arm</button><button id="v-right" data-v="right" aria-pressed="false">Right arm</button><button id="v-cuffs" data-v="cuffs" aria-pressed="false">Cuffs</button><button id="v-hem" data-v="hem" aria-pressed="false">Hem</button><button id="v-spin" data-v="spin" aria-pressed="true">Spin</button></div></div>
 </header>
 <main>
   <canvas id="cv" aria-label="3D view of the selected D-Audio garment"></canvas>
   <div class="loading" id="loading">Loading garment…</div>
   <div class="caption"><b id="cap-t">Classic Badge</b><span id="cap-s">T-shirt · White</span></div>
-  <div class="hint">Drag to turn · scroll or pinch to zoom</div>
+  <div class="hint">Drag to turn · scroll or pinch to zoom · right-drag or two fingers to move</div>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
@@ -79,8 +79,8 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(30,1,0.1,50);
 camera.position.set(0,0.05,5.6);
 const controls = new THREE.OrbitControls(camera, cv);
-controls.enableDamping = true; controls.dampingFactor = 0.08; controls.enablePan = false;
-controls.minDistance = 2.4; controls.maxDistance = 9; controls.minPolarAngle = Math.PI*0.28; controls.maxPolarAngle = Math.PI*0.62;
+controls.enableDamping = true; controls.dampingFactor = 0.08; controls.enablePan = true; controls.screenSpacePanning = true; controls.panSpeed = 0.8;
+controls.minDistance = 0.6; controls.maxDistance = 9; controls.minPolarAngle = Math.PI*0.08; controls.maxPolarAngle = Math.PI*0.92;
 controls.autoRotate = true; controls.autoRotateSpeed = 2.2;
 controls.addEventListener('start', ()=>{ if(state.spin){ setSpin(false); } });
 
@@ -208,18 +208,24 @@ async function show(){
   needsRender=true;
 }
 function press(groupId, v){ document.querySelectorAll('#'+groupId+' button').forEach(b=>b.setAttribute('aria-pressed', String(b.dataset.v===v))); }
-function setSpin(on){ state.spin=on; controls.autoRotate=on; document.getElementById('v-spin').setAttribute('aria-pressed',String(on)); if(on){ if(controls.target.y!==0){ const cr=cv.parentElement.getBoundingClientRect(); controls.target.set(0,0,0); camera.position.y=0.05; camera.position.setLength(cr.width<cr.height?7.2:5.6); } document.getElementById('v-front').setAttribute('aria-pressed','false');document.getElementById('v-back').setAttribute('aria-pressed','false');document.getElementById('v-left').setAttribute('aria-pressed','false');document.getElementById('v-right').setAttribute('aria-pressed','false');} }
+function setSpin(on){ state.spin=on; controls.autoRotate=on; document.getElementById('v-spin').setAttribute('aria-pressed',String(on)); if(on){ if(controls.target.lengthSq()>0){ const cr=cv.parentElement.getBoundingClientRect(), o=camera.position.clone().sub(controls.target); o.y=0.05; controls.target.set(0,0,0); camera.position.copy(o.setLength(cr.width<cr.height?7.2:5.6)); } VIEWS.forEach(v=>document.getElementById('v-'+v).setAttribute('aria-pressed','false')); } }
+const VIEWS=['front','back','left','right','cuffs','hem'];
 function face(side){
-  setSpin(false); const target=side==='front'?0:side==='left'?Math.PI/2:side==='right'?-Math.PI/2:Math.PI;
-  // the Sleeve view moves in close on the wearer's left sleeve so the logo on the outside of the arm reads clearly
-  const G=DATA.garments[state.kind+'_'+state.col], cr=cv.parentElement.getBoundingClientRect(), far=(cr.width<cr.height?7.2:5.6);
-  const arm=side==='left'?G.sleeve:side==='right'?G.sleeve_r:null, ty1=arm?arm.yc:0, r1=arm?(cr.width<cr.height?3.0:2.5):far;
-  const ty0=controls.target.y, off=camera.position.clone().sub(controls.target), r0=off.length();
+  setSpin(false);
+  // each view = turn angle, height to look at, and distance. Arm, cuff and hem views move in close.
+  const G=DATA.garments[state.kind+'_'+state.col], cr=cv.parentElement.getBoundingClientRect(), tall=cr.width<cr.height, far=tall?7.2:5.6;
+  const cf=(G.cuffs||[])[0];
+  const V={front:[0,0,far], back:[Math.PI,0,far],
+    left:[Math.PI/2, G.sleeve?G.sleeve.yc:0, tall?3.0:2.5], right:[-Math.PI/2, G.sleeve_r?G.sleeve_r.yc:0, tall?3.0:2.5],
+    cuffs: cf?[Math.PI/2, cf.yc, tall?1.7:1.4]:[Math.PI/2, (G.sleeve?G.sleeve.yc:0)-0.12, tall?2.0:1.7],
+    hem:[Math.PI, -0.80, tall?2.4:1.9]}[side];
+  const target=V[0], ty1=V[1], r1=V[2];
+  const tx0=controls.target.x, ty0=controls.target.y, off=camera.position.clone().sub(controls.target), r0=off.length();
   const from=Math.atan2(off.x,off.z); let delta=target-from; delta=Math.atan2(Math.sin(delta),Math.cos(delta));
   const t0=performance.now(), dur=matchMedia('(prefers-reduced-motion: reduce)').matches?1:700;
-  (function anim(){ const p=Math.min(1,(performance.now()-t0)/dur), e=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2, a=from+delta*e, r=r0+(r1-r0)*e, ty=ty0+(ty1-ty0)*e;
-    controls.target.set(0,ty,0); camera.position.set(Math.sin(a)*r*0.995, ty+0.05, Math.cos(a)*r*0.995); camera.lookAt(0,ty,0); if(p<1) requestAnimationFrame(anim); })();
-  document.getElementById('v-front').setAttribute('aria-pressed',String(side==='front')); document.getElementById('v-back').setAttribute('aria-pressed',String(side==='back')); document.getElementById('v-left').setAttribute('aria-pressed',String(side==='left')); document.getElementById('v-right').setAttribute('aria-pressed',String(side==='right'));
+  (function anim(){ const p=Math.min(1,(performance.now()-t0)/dur), e=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2, a=from+delta*e, r=r0+(r1-r0)*e, ty=ty0+(ty1-ty0)*e, tx=tx0*(1-e);
+    controls.target.set(tx,ty,0); camera.position.set(tx+Math.sin(a)*r*0.995, ty+0.05, Math.cos(a)*r*0.995); camera.lookAt(tx,ty,0); if(p<1) requestAnimationFrame(anim); })();
+  VIEWS.forEach(v=>document.getElementById('v-'+v).setAttribute('aria-pressed',String(side===v)));
 }
 document.getElementById('g-design').addEventListener('click',e=>{const b=e.target.closest('button'); if(!b) return; state.d=b.dataset.v; press('g-design',b.dataset.v); show();});
 document.getElementById('g-kind').addEventListener('click',e=>{const b=e.target.closest('button'); if(!b) return; state.kind=b.dataset.v; press('g-kind',b.dataset.v); show();});
