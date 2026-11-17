@@ -200,8 +200,8 @@ async function show(){
   matF.alphaMap=matB.alphaMap=geo.alpha; matF.needsUpdate=matB.needsUpdate=true;
   meshF.geometry=geo.front; meshB.geometry=geo.back; inF.geometry=geo.front; inB.geometry=geo.back;
   matIn.alphaMap=geo.alpha; matIn.color.set(state.col==='white'?0xc4c4c1:0x121214).convertSRGBToLinear(); matIn.needsUpdate=true;
-  const G=DATA.garments[gk], d1=(state.d==='1'||state.d==='4'), cf=(G.cuffs||[]);
-  setDecal(decals[0], d1&&G.sleeve, geo); setDecal(decals[3], d1&&G.sleeve_r, geo); setDecal(decals[1], d1&&cf[0], geo); setDecal(decals[2], d1&&cf[1], geo);
+  const G=DATA.garments[gk], d1=(state.d==='1'||state.d==='4'), arms=d1||state.kind==='hood', cf=(G.cuffs||[]);   // every hoodie range: Ligwa left arm, BMT right arm, clef on both cuffs
+  setDecal(decals[0], arms&&G.sleeve, geo); setDecal(decals[3], arms&&G.sleeve_r, geo); setDecal(decals[1], arms&&cf[0], geo); setDecal(decals[2], arms&&cf[1], geo);
   document.getElementById('loading').hidden=true;
   document.getElementById('cap-t').textContent=NAMES[state.d];
   document.getElementById('cap-s').textContent=(state.kind==='tee'?'T-shirt':'Hoodie')+' · '+(state.col==='white'?'White':'Black');
