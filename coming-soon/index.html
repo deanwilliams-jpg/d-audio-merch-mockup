@@ -48,6 +48,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 .soon{display:inline-block;margin-left:10px;padding:4px 9px;border-radius:999px;background:var(--yellow);color:#111;font:800 10px/1 var(--display);letter-spacing:.12em;vertical-align:3px}
 *,*::before,*::after{box-sizing:border-box}
 html,body{margin:0}
+.caption .copy{font-size:11px;color:var(--muted);opacity:.8;margin-top:2px}
 </style>
 </head>
 <body>
@@ -69,7 +70,7 @@ html,body{margin:0}
   <canvas id="cv" aria-label="3D view of the selected D-Audio garment"></canvas>
   <div class="loading" id="loading">Loading garment…</div>
   <div class="capview" id="capview" hidden><img id="capimg" alt=""></div>
-  <div class="caption"><b id="cap-t">D Logo</b><span id="cap-s">T-shirt · White</span></div>
+  <div class="caption"><b id="cap-t">D Logo</b><span id="cap-s">T-shirt · White</span><small class="copy">© 2026 D-Audio. All rights reserved.</small></div>
   <div class="hint" id="hint">Drag to turn · scroll or pinch to zoom · right-drag or two fingers to move</div>
 </main>
 
